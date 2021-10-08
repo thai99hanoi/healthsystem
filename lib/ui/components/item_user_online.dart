@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:heath_care/model/user.dart';
+import 'package:heath_care/repository/user_repository.dart';
 
 import '../chat_conversation.dart';
+import 'item_image.dart';
 
 class ItemUserOnline extends StatelessWidget {
   User userOnline;
@@ -50,10 +52,7 @@ class ItemUserOnline extends StatelessWidget {
             children: [
               Stack(
                 children: [
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundImage: AssetImage('assets/images/img_1.png'),
-                  ),
+                  ItemNetworkImage(image: userOnline.avatar),
                   Positioned(
                     right: 0,
                     bottom: 0,

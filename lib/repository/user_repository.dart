@@ -14,16 +14,25 @@ class UserRepository {
 
   Future<User> getCurrentUser() async {
     User? userTmp = getCurrentUserTmp();
-    if (userTmp != null){
+    if (userTmp != null) {
       return userTmp;
-    }
-    else {
+    } else {
       Map<String, dynamic> response =
           await apiBaseHelper.get("/v1/api/current-user");
       var entriesList = response.entries.toList();
-      User _currentUser =  User.fromJson(entriesList[1].value);
+      User _currentUser = User.fromJson(entriesList[1].value);
       setCurrentUser(_currentUser);
       return _currentUser;
+    }
+  }
+
+  Future<User?> getUserByUserName(String userName) async {
+    try {
+      Map<String, dynamic> response =
+          await apiBaseHelper.get("/v1/api/${userName}");
+      return User.fromJson(response);
+    } on FetchDataException catch (e) {
+      print(e);
     }
   }
 

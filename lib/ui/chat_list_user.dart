@@ -4,8 +4,6 @@ import 'package:heath_care/model/user.dart';
 import 'package:heath_care/repository/user_repository.dart';
 import 'package:heath_care/ui/components/item_conversation.dart';
 
-import 'chat_conversation.dart';
-import 'components/Bottom_Navigator.dart';
 import 'components/NavSideBar.dart';
 import 'components/item_user_online.dart';
 
@@ -48,6 +46,10 @@ class _ListUserState extends State<ListUser> {
                                   itemCount: userOnlineSnapshot.data!.length,
                                   itemBuilder:
                                       (BuildContext context, int index) {
+                                    if (index % 2 == 0) {
+                                      userOnlineSnapshot.data![index].avatar =
+                                          'https://toigingiuvedep.vn/wp-content/uploads/2021/01/anh-avatar-cho-con-gai-cuc-dep.jpg';
+                                    }
                                     return ItemUserOnline(
                                         userOnlineSnapshot.data![index],
                                         currentUser.data!.username!);
