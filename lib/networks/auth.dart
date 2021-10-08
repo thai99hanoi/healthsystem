@@ -76,7 +76,7 @@ class Auth with ChangeNotifier {
     }
 
     final extractedUserData =
-        json.decode(pref.getString('userData')) as Map<String, Object>;
+        json.decode(pref.getString('userData')??"") as Map<String, Object>;
 
     final expiryDate = DateTime.parse(extractedUserData['date'].toString());
     if (expiryDate.isBefore(DateTime.now())) {
@@ -149,7 +149,7 @@ class Auth with ChangeNotifier {
 
   Future<String> getToken() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
+    return prefs.getString('token')??"";
   }
 
   Future<void> login(User user) {
