@@ -1,123 +1,117 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:heath_care/model/user.dart';
 import 'package:heath_care/repository/user_repository.dart';
+import 'package:heath_care/ui/components/item_conversation.dart';
 
 import 'chat_conversation.dart';
 import 'components/Bottom_Navigator.dart';
 import 'components/NavSideBar.dart';
+import 'components/item_user_online.dart';
 
 // ignore: must_be_immutable
 class ListUser extends StatefulWidget {
-  // new FutureBuilder<List<User>?>(
-  // future: getUserOnline,
-  // builder: (context, snapshot) {
-  // List<User>? users = snapshot.data;
-  // print(users!.toList().toString());
-  // if (snapshot.hasData) {
-  // return Text(users.toString());
-  // } else {
-  // return CircularProgressIndicator();
-  // }
-  // }),
   @override
   State<ListUser> createState() => _ListUserState();
 }
 
 class _ListUserState extends State<ListUser> {
   int _selectedIndex = 1;
-  Future<List<User>?> _getUserOnline = UserRepository().getUserOnline();
+  Future<User> _currentUser = UserRepository().getCurrentUser();
+  Future<List<User>?> _userOnlines = UserRepository().getUserOnline();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color.fromRGBO(78, 159, 193, 1),
-        title: Text('LIÊN HỆ HỖ TRỢ'),
-      ),
-      body: FutureBuilder<List<User>?>(
-          future: _getUserOnline,
-          builder: (context, snapshot) {
-            List<User>? users = snapshot.data;
-            if (snapshot.hasData) {
-              return Container(
-                child: ListView.builder(
-                    itemCount: users!.length,
-                    itemBuilder: (BuildContext context, int index) => InkWell(
-                          onTap: () {
-                            Route route = MaterialPageRoute(
-                                builder: (context) => ConversationChat());
-                            Navigator.push(context, route);
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 20 * 0.75),
-                            child: Row(
-                              children: [
-                                Stack(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 24,
-                                      backgroundImage:
-                                          AssetImage('assets/images/img_1.png'),
-                                    ),
-                                    if ('${users[index].isOnline}' == '1')
-                                      Positioned(
-                                        right: 0,
-                                        bottom: 0,
-                                        child: Container(
-                                          height: 16,
-                                          width: 16,
-                                          decoration: BoxDecoration(
-                                            color: Colors.green,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                                color: Colors.white, width: 3),
-                                          ),
-                                        ),
-                                      )
-                                  ],
-                                ),
-                                Expanded(
-                                    child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${users[index].username}',
-                                        style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                      SizedBox(
-                                        height: 8,
-                                      ),
-                                      Opacity(
-                                        opacity: 0.64,
-                                        child: Text(
-                                          "Last Message Here!",
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                )),
-                                Opacity(
-                                  opacity: 0.64,
-                                  child: Text("3m ago"),
-                                )
-                              ],
+        appBar: AppBar(
+          backgroundColor: Color.fromRGBO(78, 159, 193, 1),
+          title: Text('LIÊN HỆ HỖ TRỢ'),
+        ),
+        body: FutureBuilder<User>(
+            future: _currentUser,
+            builder: (context, currentUser) {
+              if (currentUser.hasData) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FutureBuilder<List<User>?>(
+                        future: _userOnlines,
+                        builder: (context, userOnlineSnapshot) {
+                          if (userOnlineSnapshot.hasData) {
+                            print(
+                                'lenght onlines ${userOnlineSnapshot.data!.length}');
+                            return SizedBox(
+                              height: 100,
+                              child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  shrinkWrap: true,
+                                  itemCount: userOnlineSnapshot.data!.length,
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
+                                    return ItemUserOnline(
+                                        userOnlineSnapshot.data![index],
+                                        currentUser.data!.username!);
+                                  }),
+                            );
+                          } else {
+                            return Container();
+                          }
+                        }),
+                    StreamBuilder(
+                        stream: FirebaseFirestore.instance
+                            .collection('chats')
+                            .orderBy('updated_time', descending: true)
+                            .where('participants', arrayContainsAny: [
+                          currentUser.data!.username
+                        ]).snapshots(),
+                        builder:
+                            (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                          if (snapshot.hasData &&
+                              snapshot.data!.docs.isNotEmpty) {
+                            List conversations =
+                                snapshot.data!.docs.where((element) {
+                              return (element['messages'] as List).isNotEmpty;
+                            }).toList();
+                            return Expanded(
+                              child: ListView.builder(
+                                  itemCount: conversations != null
+                                      ? conversations.length
+                                      : 0,
+                                  shrinkWrap: true,
+                                  itemBuilder:
+                                      (BuildContext context, int index) {
+                                    var conversation = conversations[index];
+                                    var userNameHim =
+                                        (conversation['participants'] as List)
+                                            .firstWhere((element) =>
+                                                element !=
+                                                currentUser.data!.username);
+                                    var lastMessage =
+                                        (conversation['messages'] as List).last;
+                                    return ItemConversation(
+                                        conversation,
+                                        userNameHim.toString(),
+                                        lastMessage['content'],
+                                        lastMessage['created_time']);
+                                  }),
+                            );
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Center(
+                              child: Text(
+                                "Hãy bắt đầu cuộc hội thoại ngay để nhận được sự trợ giúp!",
+                                textAlign: TextAlign.center,
+                              ),
                             ),
-                          ),
-                        )),
-              );
-            }
-            return Center(child: CircularProgressIndicator());
-          }),
-        drawer: NavDrawer()
-    );
+                          );
+                        }),
+                  ],
+                );
+              } else {
+                return Center(child: CircularProgressIndicator());
+              }
+            }),
+        drawer: NavDrawer());
   }
 }

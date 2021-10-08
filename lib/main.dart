@@ -1,9 +1,7 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:heath_care/ui/chat_conversation.dart';
-import 'package:heath_care/ui/home_screen.dart';
 import 'package:heath_care/ui/login_screen.dart';
 import 'package:heath_care/ui/main_screen.dart';
-import 'package:heath_care/ui/new_home.dart';
 import 'package:heath_care/ui/splash_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -17,6 +15,7 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    Firebase.initializeApp();
     return  ChangeNotifierProvider.value(
           value: Auth(),
           child: Consumer<Auth>(

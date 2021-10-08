@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "705020165178",
+    "project_id": "chatapp-441fe",
+    "storage_bucket": "chatapp-441fe.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:705020165178:android:a56d97552dc34ec1e2c903",
+        "android_client_info": {
+          "package_name": "com.example.heath_care"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "705020165178-vo98tsg5d0n42m690gokc16d9ljl8mao.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3svxedteQVufFjjqI9JQ_4uzF1Im7RU4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "705020165178-vo98tsg5d0n42m690gokc16d9ljl8mao.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:705020165178:android:b3239c8fcb6cef8ae2c903",
+        "android_client_info": {
+          "package_name": "dev.flutterexplained.webrtc_tutorial"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "705020165178-vo98tsg5d0n42m690gokc16d9ljl8mao.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3svxedteQVufFjjqI9JQ_4uzF1Im7RU4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "705020165178-vo98tsg5d0n42m690gokc16d9ljl8mao.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

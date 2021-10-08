@@ -1,4 +1,5 @@
 import 'package:heath_care/model/role.dart';
+
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:json_annotation/json_annotation.dart';
 
@@ -76,5 +77,10 @@ class User {
       avatar: json["avatar"] as String,
       isActive: json['isActive'] as int,
       isOnline: json['isOnline'] as int);
-}
 
+  String getDisplayName() {
+    if (firstname != null && lastname != null)
+      return firstname.toString() + " " + lastname.toString();
+    return username.toString();
+  }
+}
