@@ -22,6 +22,13 @@ dependencies:
   provider: ^6.0.1
   json_annotation: ^4.0.1
   intl: ^0.17.0
+  image_picker: ^0.8.4+1
+  dio_http_cache: ^0.3.0
+  dio: ^4.0.0
+  flutter_webrtc: ^0.6.10+hotfix.1
+  assets_audio_player: ^3.0.3+6
+  permission_handler: ^8.1.6
+  cached_network_image: ^3.1.0
 
 dev_dependencies:
   flutter_test:
@@ -38,8 +45,5 @@ flutter:
   # the material Icons class.
   uses-material-design: true
   assets:
-    - assets/images/logo.png
-    - assets/images/img.png
-    - assets/images/img_1.png
-    - assets/images/alarm.png
-    - assets/images/img_2.png
+    - assets/images/
+    - assets/audio/

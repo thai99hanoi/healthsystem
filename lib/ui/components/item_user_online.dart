@@ -2,10 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:heath_care/model/user.dart';
-import 'package:heath_care/repository/user_repository.dart';
 
 import '../chat_conversation.dart';
-import 'item_image.dart';
+import 'item_image_avatar.dart';
 
 class ItemUserOnline extends StatelessWidget {
   User userOnline;
@@ -45,36 +44,45 @@ class ItemUserOnline extends StatelessWidget {
         });
       },
       child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-          child: Column(
-            // mainAxisAlignment: MainAxisAlignment.center,
-            // crossAxisAlignment: CrossAxisAlignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Stack(
+              Row(
                 children: [
-                  ItemNetworkImage(image: userOnline.avatar),
-                  Positioned(
-                    right: 0,
-                    bottom: 0,
-                    child: Container(
-                      height: 16,
-                      width: 16,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                    ),
-                  )
+                  Stack(
+                    children: [
+                      ItemAvatarNetworkImage(image: userOnline.avatar),
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          height: 16,
+                          width: 16,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                  SizedBox(
+                    width: 16,
+                  ),
+                  Text(
+                    userOnline.getDisplayName(),
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold),
+                  ),
                 ],
               ),
-              Container(
-                width: 64,
-                child: Text(
-                  userOnline.getDisplayName(),
-                  maxLines: 3,
-                  textAlign: TextAlign.center,
-                ),
+              Opacity(
+                opacity: 0.64,
+                child: Text("Online", style: TextStyle(fontSize: 12),),
               )
             ],
           )),
@@ -84,8 +92,7 @@ class ItemUserOnline extends StatelessWidget {
   void navigatorToConversation(
       BuildContext context, DocumentReference chatDocument) {
     Route route = MaterialPageRoute(
-        builder: (context) =>
-            ConversationChat(chatDocument, userOnline.getDisplayName()));
+        builder: (context) => ConversationChat(chatDocument, userOnline));
     Navigator.push(context, route);
   }
 }

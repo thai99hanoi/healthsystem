@@ -3,79 +3,95 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:heath_care/model/user.dart';
 import 'package:heath_care/repository/user_repository.dart';
-import 'package:heath_care/ui/components/item_image.dart';
+import 'package:heath_care/ui/components/item_image_avatar.dart';
 import 'package:heath_care/utils/time_util.dart';
 
 import '../chat_conversation.dart';
 
 class ItemConversation extends StatelessWidget {
   String friendName;
-  String lastMessage;
-  Timestamp timeSend;
   QueryDocumentSnapshot chatDocument;
+  late final Future<User?> friend;
+  Map<String, dynamic> lastMessage;
+  bool isSeen;
 
-  ItemConversation(this.chatDocument, this.friendName, this.lastMessage,
-      this.timeSend);
+  ItemConversation(
+      this.chatDocument, this.friendName, this.lastMessage, this.isSeen) {
+    print('khoi tao lai');
+    friend = UserRepository().getUserByUserName(friendName);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () {
-        Route route = MaterialPageRoute(
-            builder: (context) =>
-                ConversationChat(chatDocument.reference, friendName));
-        Navigator.push(context, route);
-      },
-      child: Padding(
-        padding:
-        const EdgeInsets.symmetric(horizontal: 20, vertical: 20 * 0.75),
+    return FutureBuilder<User?>(
+        future: friend,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return buildItem(context, snapshot.data!);
+          }
+          return buildItem(context, User(username: friendName));
+        });
+  }
+
+  Padding buildItem(BuildContext context, User user) {
+    String prefix = lastMessage['from'] == friendName
+        ? user.getLastName() + ": "
+        : "Bạn: ";
+    bool isSeen = this.isSeen || lastMessage['from'] != friendName;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20 * 0.75),
+      child: InkWell(
+        onTap: () {
+          Route route = MaterialPageRoute(
+              builder: (context) =>
+                  ConversationChat(chatDocument.reference, user));
+          Navigator.push(context, route);
+        },
         child: Row(
           children: [
-            FutureBuilder<User?>(
-              future: UserRepository().getUserByUserName(friendName),
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return ItemNetworkImage(image:snapshot.data!.avatar);
-                } else {
-                  return CircleAvatar(
-                    radius: 24,
-                    backgroundImage: AssetImage('assets/images/img_1.png'),
-                  );
-                }
-              },
-            ),
+            ItemAvatarNetworkImage(image: user.avatar),
             Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        friendName,
-                        style: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w500),
-                      ),
-                      SizedBox(
-                        height: 8,
-                      ),
-                      Opacity(
-                        opacity: 0.64,
-                        child: Text(
-                          lastMessage,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      )
-                    ],
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.getDisplayName(),
+                    style: getTextStyle(isSeen, 15.0),
                   ),
-                )),
-            Opacity(
-              opacity: 0.64,
-              child: Text(getTimeMess(timeSend)),
-            )
+                  SizedBox(
+                    height: 8,
+                  ),
+                  Text(
+                    lastMessage['content']
+                            .toString()
+                            .contains("data:image;")
+                        ?prefix+ "Đã gửi 1 hình ảnh"
+                        : prefix + lastMessage['content'],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: getTextStyle(isSeen, 13),
+                  ),
+                ],
+              ),
+            )),
+            Text(
+              getTimeMess(lastMessage['created_time']),
+              style: getTextStyle(isSeen, 12),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  TextStyle getTextStyle(bool isSeen, double fontSize) {
+    return isSeen
+        ? TextStyle(color: Colors.black87)
+        : TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: fontSize);
   }
 }

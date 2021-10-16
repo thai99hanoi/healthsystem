@@ -6,8 +6,8 @@ String getTimeMess(Timestamp sendTime) {
   var differenceTime = sendTime.toDate().difference(Now).inMinutes.abs();
   if (differenceTime < 1)
     return 'vừa xong';
-  else if (differenceTime < 60)
-    return "$differenceTime phút trước";
+  else if (differenceTime < 60) return "$differenceTime phút trước";
+  bool isSameWeek = getWeekOfYear(Now) == getWeekOfYear(sendTime.toDate());
 
   var format = new DateFormat('yyyy-MM-dd');
 
@@ -24,7 +24,6 @@ String getTimeMess(Timestamp sendTime) {
     }
   }
   past = past.substring(0, k);
-
   if (past == now) {
     format = new DateFormat('yyyy-MM-dd HH:mm:ss');
     String s = format.parse(sendTime.toDate().toString()).toString();
@@ -43,7 +42,7 @@ String getTimeMess(Timestamp sendTime) {
     s = s.substring(k1, k2);
     //print("hôm nay là ssss $s");
     return s;
-  } else {
+  } else if (isSameWeek) {
     DateTime s = format.parse(sendTime.toDate().toString());
     String a = DateFormat('E').format(s);
     if (a == "Mon")
@@ -60,5 +59,15 @@ String getTimeMess(Timestamp sendTime) {
       return "T.7";
     else
       return "CN";
+  }else{
+    return DateFormat('dd-MM-yyyy').format(sendTime.toDate());
   }
+}
+
+getWeekOfYear(DateTime time){
+  int d=DateTime.parse("${time.year}-01-01").millisecondsSinceEpoch;
+  int t= time.millisecondsSinceEpoch;
+  double daydiff= (t- d)/(1000 * (3600 * 24));
+  double week= daydiff/7;
+  return(week.ceil());
 }

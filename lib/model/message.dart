@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Message {
   String from;
-  String content;
+  String? content;
   Timestamp createdTime;
 
   Message(this.from, this.content, this.createdTime);
