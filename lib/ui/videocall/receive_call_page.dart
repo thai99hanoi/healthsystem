@@ -47,6 +47,30 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
 
   bool isCompleted = false;
 
+  Future<bool> _onWillPop() async {
+    return (await showDialog(
+          context: context,
+          builder: (context) => new AlertDialog(
+            title: new Text('Thoát cuộc gọi?'),
+            content: new Text('Bạn chắc chắn muốn kết thúc cuộc gọi?'),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: new Text('Tiếp tục gọi'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _response(false);
+                },
+                child: new Text('Thoát'),
+              ),
+            ],
+          ),
+        )) ??
+        false;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -55,11 +79,11 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
       dataRoom['participants'] = event.get('participants');
       dataRoom['from'] = event.get('from');
       dataRoom['chat_id'] = event.get('chat_id');
+      if (event.get('completed') == true) {
+        Navigator.pop(context);
+        widget.onHangUp();
+      }
       setState(() {
-        if (event.get('completed') == true) {
-          widget.onHangUp();
-          Navigator.pop(context);
-        }
         isCompleted = event.get('completed');
       });
     });
@@ -74,99 +98,102 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
-    return Scaffold(
-      body: Container(
-        height: size.height,
-        width: size.width,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              height: size.height * 0.15,
-            ),
-            StreamBuilder(
-              stream: widget.reference.snapshots(),
-              builder: (BuildContext context,
-                  AsyncSnapshot<DocumentSnapshot> snapshot) {
-                if (!snapshot.hasData) {
-                  return Container();
-                }
-                return Column(
-                  children: [
-                    Text(
-                      'Incoming Call',
-                      style: TextStyle(
-                        color: Colors.green.shade700,
-                        fontSize: size.width / 18.4,
-                        fontWeight: FontWeight.w400,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: Container(
+          height: size.height,
+          width: size.width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              SizedBox(
+                height: size.height * 0.15,
+              ),
+              StreamBuilder(
+                stream: widget.reference.snapshots(),
+                builder: (BuildContext context,
+                    AsyncSnapshot<DocumentSnapshot> snapshot) {
+                  if (!snapshot.hasData) {
+                    return Container();
+                  }
+                  return Column(
+                    children: [
+                      Text(
+                        'Incoming Call',
+                        style: TextStyle(
+                          color: Colors.green.shade700,
+                          fontSize: size.width / 18.4,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      height: size.height * .08,
-                    ),
-                    ItemAvatarNetworkImage(
-                      image: widget.avatarFrom,
-                    ),
-                    SizedBox(
-                      height: 24.0,
-                    ),
-                    Text(
-                      widget.fullNameFrom ?? dataRoom['from'],
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontSize: size.width / 16.8,
-                        fontWeight: FontWeight.w600,
+                      SizedBox(
+                        height: size.height * .08,
                       ),
-                    ),
-                    SizedBox(
-                      height: size.height * .24,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        GestureDetector(
-                          onTap: () async {
-                            await _response(false);
-                          },
-                          child: Container(
-                            height: size.width * .18,
-                            width: size.width * .18,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.redAccent,
-                            ),
-                            child: Icon(
-                              Icons.call_end,
-                              color: Colors.white,
-                              size: size.width / 18.0,
+                      ItemAvatarNetworkImage(
+                        image: widget.avatarFrom,
+                      ),
+                      SizedBox(
+                        height: 24.0,
+                      ),
+                      Text(
+                        widget.fullNameFrom ?? dataRoom['from'],
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontSize: size.width / 16.8,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(
+                        height: size.height * .24,
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          GestureDetector(
+                            onTap: () async {
+                              await _response(false);
+                            },
+                            child: Container(
+                              height: size.width * .18,
+                              width: size.width * .18,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.redAccent,
+                              ),
+                              child: Icon(
+                                Icons.call_end,
+                                color: Colors.white,
+                                size: size.width / 18.0,
+                              ),
                             ),
                           ),
-                        ),
-                        GestureDetector(
-                          onTap: () async {
-                            await _response(true);
-                          },
-                          child: Container(
-                            height: size.width * .18,
-                            width: size.width * .18,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.green,
-                            ),
-                            child: Icon(
-                              Icons.call,
-                              color: Colors.white,
-                              size: size.width / 18.0,
+                          GestureDetector(
+                            onTap: () async {
+                              await _response(true);
+                            },
+                            child: Container(
+                              height: size.width * .18,
+                              width: size.width * .18,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.green,
+                              ),
+                              child: Icon(
+                                Icons.call,
+                                color: Colors.white,
+                                size: size.width / 18.0,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
+                        ],
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -20,8 +20,8 @@ class CallFireBase {
         .where('participants', arrayContainsAny: [currentUserName]).snapshots();
   }
 
-  makeCall(
-      User currentUser, friendUserName, String chatId, bool isVoiceCall) async {
+  makeCall(User currentUser, friendUserName, String chatId,
+      bool isVoiceCall) async {
     await _firebaseInstance.collection('requests').add({
       'participants': [currentUser.username, friendUserName],
       'from': currentUser.username,

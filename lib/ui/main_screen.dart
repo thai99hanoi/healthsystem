@@ -61,24 +61,18 @@ class _MainScreenState extends State<MainScreen> {
           if (datas.first['from'] == currentUser.username) {
             navigatorPage(CallPage(datas.first['is_voice_call'], true,
                 datas.first.reference, currentUser.username, () {
-              setState(() {
-                isInCall = false;
-              });
+              isInCall = false;
             }));
           } else if (datas.first['incoming_call'] == false) {
             navigatorPage(CallPage(datas.first['is_voice_call'], false,
                 datas.first.reference, currentUser.username, () {
-              setState(() {
-                isInCall = false;
-              });
+              isInCall = false;
             }));
           } else if (datas.first['room_id'].toString().isNotEmpty) {
             navigatorPage(ReceiveCallPage(
               datas.first.reference,
               () {
-                setState(() {
-                  isInCall = false;
-                });
+                isInCall = false;
               },
               fullNameFrom: datas.first['full_name_from'],
               avatarFrom: datas.first['avatar_from'],
@@ -90,9 +84,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   void navigatorPage(Widget page) {
-    setState(() {
-      isInCall = true;
-    });
+    isInCall = true;
     Route route = MaterialPageRoute(builder: (context) => page);
     Navigator.push(context, route);
   }

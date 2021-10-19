@@ -41,18 +41,16 @@ class Signaling {
     }
   }
 
+  enableCamera(bool enable) async {
+    localStream?.getVideoTracks()[0].enabled = enable;
+  }
+
   enableSpeaker(bool isEnable) async {
-    if (isEnable) {
-      print('enable speaker $isEnable');
-      remoteStream?.getAudioTracks()[0].enableSpeakerphone(true);
-      remoteStream?.getAudioTracks()[0].enabled = true;
-      remoteStream?.getAudioTracks()[0].setVolume(100);
-      remoteStream?.getAudioTracks()[0].enableSpeakerphone(true);
-      remoteStream?.getAudioTracks()[0].enabled = true;
-      remoteStream?.getAudioTracks()[0].setVolume(100);
-    } else {
-      remoteStream?.getAudioTracks()[0].setVolume(50);
-      localStream?.getAudioTracks()[0].setVolume(50);
+    remoteStream?.getAudioTracks()[0].enableSpeakerphone(isEnable);
+    if(isEnable){
+      remoteStream?.getAudioTracks()[0].setVolume(10);
+    }else{
+      remoteStream?.getAudioTracks()[0].setVolume(3);
     }
   }
 
@@ -260,7 +258,7 @@ class Signaling {
     peerConnection?.onConnectionState = (RTCPeerConnectionState state) {
       print('Connection state change: $state');
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
-        // onConnectedFail!();
+        onConnectedFail!();
       }
     };
 
