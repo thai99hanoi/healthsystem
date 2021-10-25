@@ -1,9 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:heath_care/repository/file_repository.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ChatInputField extends StatelessWidget {
-  const ChatInputField({
-     Key? key,
-  }) : super(key: key);
+class ChatInputField extends StatefulWidget {
+  final Function(String?) onSendMessage;
+  final Function? onProgress;
+  final Function? onErrorImage;
+  final Function? onDone;
+
+  ChatInputField(this.onSendMessage,
+      {this.onProgress, this.onErrorImage, this.onDone});
+
+  @override
+  State<StatefulWidget> createState() {
+    return _ChatInputFieldState();
+  }
+}
+
+class _ChatInputFieldState extends State<ChatInputField> {
+  TextEditingController textEditingController = new TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+  XFile? image;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -19,10 +37,32 @@ class ChatInputField extends StatelessWidget {
         ]),
         child: SafeArea(
             child: Row(children: [
-          Icon(Icons.camera_alt_outlined, color: Colors.blue),
-          SizedBox(
-            width: 20,
-          ),
+          IconButton(
+              onPressed: () async {
+                try {
+                  image = await _picker.pickImage(
+                      source: ImageSource.camera, imageQuality: 70);
+                  await progressImage();
+                  widget.onDone!();
+                } catch (e) {
+                  widget.onErrorImage!();
+                  print(e);
+                }
+              },
+              icon: Icon(Icons.camera_alt_outlined, color: Colors.blue)),
+          IconButton(
+              onPressed: () async {
+                try {
+                  image = await _picker.pickImage(
+                      source: ImageSource.gallery, imageQuality: 70);
+                  await progressImage();
+                  widget.onDone!();
+                } catch (e) {
+                  widget.onErrorImage!();
+                  print(e);
+                }
+              },
+              icon: Icon(Icons.image, color: Colors.blue)),
           Expanded(
               child: Container(
                   padding: EdgeInsets.symmetric(horizontal: 20 * 0.75),
@@ -38,14 +78,44 @@ class ChatInputField extends StatelessWidget {
                     ),
                     Expanded(
                       child: TextField(
+                          onChanged: (_) {
+                            setState(() {});
+                          },
+                          controller: textEditingController,
+                          enabled: image == null,
                           decoration: InputDecoration(
-                        hintText: "Type message",
-                        border: InputBorder.none,
-                      )),
+                            hintText: "Type message",
+                            border: InputBorder.none,
+                          )),
                     ),
-                    Icon(Icons.send,
-                        color: Colors.blue.withOpacity(0.64)),
+                    IconButton(
+                        onPressed: () {
+                          if (textEditingController.text.isNotEmpty) {
+                            widget.onSendMessage(textEditingController.text);
+                          }
+                          FocusScope.of(context).requestFocus(FocusNode());
+                          textEditingController.text = '';
+                          setState(() {});
+                        },
+                        icon: Icon(Icons.send,
+                            color: textEditingController.text.isEmpty &&
+                                    image == null
+                                ? Colors.grey.shade400
+                                : Colors.blue.withOpacity(0.64))),
                   ])))
         ])));
+  }
+
+  Future<void> progressImage() async {
+    widget.onProgress!();
+    String? path = await FileRepository().uploadImage(image?.path);
+    if (path == null) {
+      widget.onErrorImage!();
+      return;
+    }
+    widget.onSendMessage('data:image;$path');
+    setState(() {
+      image = null;
+    });
   }
 }
