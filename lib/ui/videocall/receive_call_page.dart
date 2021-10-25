@@ -28,6 +28,7 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
   final interval = const Duration(seconds: 1);
 
   final int timerMaxSeconds = 60;
+  bool _isShowDialog = false;
 
   Future<void> _response(bool accept) async {
     updateRequest(accept);
@@ -48,6 +49,7 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
   bool isCompleted = false;
 
   Future<bool> _onWillPop() async {
+    _isShowDialog = true;
     return (await showDialog(
           context: context,
           builder: (context) => new AlertDialog(
@@ -55,11 +57,15 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
             content: new Text('Bạn chắc chắn muốn kết thúc cuộc gọi?'),
             actions: <Widget>[
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  _isShowDialog = false;
+                  Navigator.of(context).pop();
+                },
                 child: new Text('Tiếp tục gọi'),
               ),
               TextButton(
                 onPressed: () {
+                  _isShowDialog = false;
                   Navigator.pop(context);
                   _response(false);
                 },
@@ -81,6 +87,9 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
       dataRoom['chat_id'] = event.get('chat_id');
       if (event.get('completed') == true) {
         Navigator.pop(context);
+        if(_isShowDialog){
+          Navigator.pop(context);
+        }
         widget.onHangUp();
       }
       setState(() {
@@ -99,7 +108,10 @@ class _ReceiveCallPageState extends State<ReceiveCallPage> {
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     return WillPopScope(
-      onWillPop: _onWillPop,
+      onWillPop: () async {
+        _isShowDialog = !_isShowDialog;
+        return await _onWillPop();
+      },
       child: Scaffold(
         body: Container(
           height: size.height,

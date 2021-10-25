@@ -10,11 +10,6 @@ class Signaling {
   Map<String, dynamic> configuration = {
     'iceServers': [
       {'url': 'stun:stun.l.google.com:19302'},
-      {
-        'url': 'turn:numb.viagenie.ca',
-        'username': 'webrtc@live.com',
-        'credential': 'muazkh'
-      },
     ]
   };
 

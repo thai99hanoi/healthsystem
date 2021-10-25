@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:heath_care/firebase/call_firebase.dart';
 import 'package:heath_care/firebase/chat_firebase.dart';
 import 'package:heath_care/model/message.dart';
+import 'package:heath_care/model/request_call.dart';
 import 'package:heath_care/repository/user_repository.dart';
 import 'package:heath_care/ui/report_screen.dart';
 import 'package:heath_care/ui/test_screen.dart';
@@ -30,12 +31,6 @@ class _MainScreenState extends State<MainScreen> {
 
   bool isInCall = false;
 
-  @override
-  void initState() {
-    listenerCall();
-    super.initState();
-  }
-
   listenerCall() {
     UserRepository().getCurrentUser().then((currentUser) {
       CallFireBase.getInstance()
@@ -46,36 +41,38 @@ class _MainScreenState extends State<MainScreen> {
           if (event.docChanges.isNotEmpty) {
             event.docChanges.forEach((element) {
               final data = element.doc.data();
+              RequestCall request = RequestCall.fromJson(data!);
               if (element.type == DocumentChangeType.added &&
-                  data?['completed'] == false &&
-                  data?['incoming_call'] == true) {
+                  request.completed == false &&
+                  request.inComingCall == true) {
                 Message message = Message(currentUser.username!,
                     "Người nhận đang có cuộc gọi khác!", Timestamp.now());
                 ChatFireBase.getInstance()
-                    .sendMessageWithId(message, data?['chat_id']);
+                    .sendMessageWithId(message, data['chat_id']);
                 element.doc.reference.update({'completed': true});
               }
             });
           }
         } else if (datas.isNotEmpty && !isInCall) {
-          if (datas.first['from'] == currentUser.username) {
-            navigatorPage(CallPage(datas.first['is_voice_call'], true,
+          RequestCall firstRequest = RequestCall.fromJson(datas.first.data());
+          if (firstRequest.from == currentUser.username) {
+            navigatorPage(CallPage(firstRequest.isVoiceCall, true,
                 datas.first.reference, currentUser.username, () {
               isInCall = false;
             }));
-          } else if (datas.first['incoming_call'] == false) {
-            navigatorPage(CallPage(datas.first['is_voice_call'], false,
+          } else if (firstRequest.inComingCall == false) {
+            navigatorPage(CallPage(firstRequest.isVoiceCall, false,
                 datas.first.reference, currentUser.username, () {
               isInCall = false;
             }));
-          } else if (datas.first['room_id'].toString().isNotEmpty) {
+          } else if (firstRequest.roomId?.isNotEmpty == true) {
             navigatorPage(ReceiveCallPage(
               datas.first.reference,
               () {
                 isInCall = false;
               },
-              fullNameFrom: datas.first['full_name_from'],
-              avatarFrom: datas.first['avatar_from'],
+              fullNameFrom: firstRequest.fullNameFrom,
+              avatarFrom: firstRequest.avatarFrom,
             ));
           }
         }
@@ -87,6 +84,12 @@ class _MainScreenState extends State<MainScreen> {
     isInCall = true;
     Route route = MaterialPageRoute(builder: (context) => page);
     Navigator.push(context, route);
+  }
+
+  @override
+  void initState() {
+    listenerCall();
+    super.initState();
   }
 
   @override

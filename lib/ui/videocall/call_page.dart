@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:assets_audio_player/assets_audio_player.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -9,16 +8,18 @@ import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:heath_care/firebase/chat_firebase.dart';
 import 'package:heath_care/model/message.dart';
+import 'package:heath_care/ui/components/call_component.dart';
+import 'package:heath_care/ui/components/icon_behavior.dart';
 import 'package:heath_care/utils/dialog_util.dart';
 import 'package:heath_care/utils/signaling.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class CallPage extends StatefulWidget {
-  bool createRoom;
   DocumentReference reference;
+  bool createRoom;
+  bool isVoiceCall;
   Function onHangUp;
   String? currentName;
-  bool isVoiceCall;
 
   CallPage(this.isVoiceCall, this.createRoom, this.reference, this.currentName,
       this.onHangUp);
@@ -28,24 +29,26 @@ class CallPage extends StatefulWidget {
 }
 
 class _CallPageState extends State<CallPage> {
+  String? roomId;
+  bool isCalling = false;
+  bool isMute = false;
+  String timeCall = '';
+  int start = 0;
+  bool isFrontCamera = true;
+  bool isReady = false;
+  int timeOut = 45;
+  bool isSpeakerPhone = true;
+  bool isDisConnected = false;
+  bool enableCamera = true;
+  bool remoteEnableCamera = true;
+  bool completed = false;
+  bool isShowDialog = false;
+  Timer? timerInstance;
+  Timer? timerTimeOutInstance;
+
   Signaling signaling = Signaling();
-  RTCVideoRenderer _localRenderer = RTCVideoRenderer();
-  RTCVideoRenderer _remoteRenderer = RTCVideoRenderer();
-  String? _roomId;
-  bool _isCalling = false;
-  bool _isMute = false;
-  String _timmer = '';
-  Timer? _timmerInstance;
-  Timer? _timmer_timeOutInstance;
-  int _start = 0;
-  bool _isFrontCamera = true;
-  bool _isReady = false;
-  int _timeOut = 45;
-  bool _isSpeakerPhone = true;
-  bool _isDisConnected = false;
-  bool _enableCamera = true;
-  bool _remoteEnableCamera = true;
-  bool _completed = false;
+  RTCVideoRenderer localRenderer = RTCVideoRenderer();
+  RTCVideoRenderer remoteRenderer = RTCVideoRenderer();
 
   final assetsAudioPlayer = AssetsAudioPlayer();
 
@@ -64,59 +67,16 @@ class _CallPageState extends State<CallPage> {
     }
   }
 
-  void start_timeOut() {
+  void startTimeOut() {
     var oneSec = Duration(seconds: 1);
-    _timmer_timeOutInstance = Timer.periodic(oneSec, (Timer timer) {
-      if (timer.tick >= _timeOut) {
-        if (!_isReady && !_completed) {
-          _makeCallCompleted();
-          _sendMessage(widget.currentName, "Không thể thực hiện cuộc gọi!");
+    timerTimeOutInstance = Timer.periodic(oneSec, (Timer timer) {
+      if (timer.tick >= timeOut) {
+        if (!isReady && !completed) {
+          makeCallCompleted();
+          sendMessage(widget.currentName, "Không thể thực hiện cuộc gọi!");
         }
-        _timmer_timeOutInstance?.cancel();
+        timerTimeOutInstance?.cancel();
       }
-    });
-  }
-
-  void startTimmer() {
-    var oneSec = Duration(seconds: 1);
-    _timmerInstance = Timer.periodic(
-        oneSec,
-        (Timer timer) => setState(() {
-              if (_start < 0) {
-                _timmerInstance?.cancel();
-              } else {
-                _start = _start + 1;
-                _timmer = getTimerTime(_start);
-              }
-            }));
-  }
-
-  _sendMessage(String? userName, String content) {
-    widget.reference.get().then((value) {
-      Message message =
-          Message(userName ?? value['from'], content, Timestamp.now());
-      ChatFireBase.getInstance()
-          .sendMessageWithId(message, value.get('chat_id'));
-    });
-  }
-
-  _updateEnableCamera(bool isEnable) {
-    widget.reference.get().then((value) {
-      if (widget.currentName == value.get('from')) {
-        widget.reference.update({
-          'camera_from': isEnable,
-        });
-      } else {
-        widget.reference.update({
-          'camera_to': isEnable,
-        });
-      }
-    });
-  }
-
-  _makeCallCompleted() {
-    widget.reference.update({
-      'completed': true,
     });
   }
 
@@ -138,9 +98,54 @@ class _CallPageState extends State<CallPage> {
     return sMinute + ':' + sSeconds;
   }
 
+  void startTimer() {
+    var oneSec = Duration(seconds: 1);
+    timerInstance = Timer.periodic(
+        oneSec,
+        (Timer timer) => setState(() {
+              if (start < 0) {
+                timerInstance?.cancel();
+              } else {
+                start = start + 1;
+                timeCall = getTimerTime(start);
+              }
+            }));
+  }
+
+
+  updateEnableCamera(bool isEnable) {
+    widget.reference.get().then((value) {
+      if (widget.currentName == value.get('from')) {
+        widget.reference.update({
+          'camera_from': isEnable,
+        });
+      } else {
+        widget.reference.update({
+          'camera_to': isEnable,
+        });
+      }
+    });
+  }
+
+  makeCallCompleted() {
+    widget.reference.update({
+      'completed': true,
+    });
+  }
+
+
+  sendMessage(String? userName, String content) {
+    widget.reference.get().then((value) {
+      Message message =
+      Message(userName ?? value['from'], content, Timestamp.now());
+      ChatFireBase.getInstance()
+          .sendMessageWithId(message, value.get('chat_id'));
+    });
+  }
+
   void updateRoom() {
     widget.reference.update({
-      'room_id': _roomId,
+      'room_id': roomId,
     });
   }
 
@@ -148,28 +153,29 @@ class _CallPageState extends State<CallPage> {
     if (pop) {
       Navigator.pop(context);
     }
+    if (isShowDialog) {
+      Navigator.pop(context);
+    }
     playLocal();
-    signaling.hangUp(_localRenderer);
-    _timmerInstance?.cancel();
+    signaling.hangUp(localRenderer);
+    timerInstance?.cancel();
     widget.onHangUp();
   }
 
   initListener() {
-     widget.reference.snapshots().listen((event) {
+    widget.reference.snapshots().listen((event) {
       try {
         if (widget.currentName == event.get('from') &&
             event.get('camera_to') != null) {
           final to = event.get('camera_to');
           setState(() {
-            _remoteEnableCamera = to;
-            print('set cam to ${_remoteEnableCamera}');
+            remoteEnableCamera = to;
           });
         } else if (widget.currentName != event.get('from') &&
             event.get('camera_from') != null) {
           final from = event.get('camera_from');
           setState(() {
-            _remoteEnableCamera = from;
-            print('set cam from ${_remoteEnableCamera}');
+            remoteEnableCamera = from;
           });
         }
       } catch (e) {
@@ -179,11 +185,11 @@ class _CallPageState extends State<CallPage> {
       if ((event.get('completed') == false &&
           event.get('incoming_call') == false)) {
         setState(() {
-          _isReady = true;
+          isReady = true;
         });
       }
-      if (event.get('completed') == true && !_isDisConnected) {
-        _completed = true;
+      if (event.get('completed') == true && !isDisConnected) {
+        completed = true;
         hangUp();
       }
     });
@@ -196,26 +202,27 @@ class _CallPageState extends State<CallPage> {
     ].request();
     if (statuses[Permission.camera]!.isGranted &&
         statuses[Permission.microphone]!.isGranted &&
-        !_isCalling) {
+        !isCalling) {
       await signaling.openUserMedia(
-          widget.isVoiceCall, _localRenderer, _remoteRenderer);
+          widget.isVoiceCall, localRenderer, remoteRenderer);
       if (widget.createRoom) {
-        _roomId = await signaling.createRoom(_remoteRenderer);
+        roomId = await signaling.createRoom(remoteRenderer);
         updateRoom();
       } else {
         final snapshot = await widget.reference.get();
         String idJoin = snapshot['room_id'];
         signaling.joinRoom(
           idJoin,
-          _remoteRenderer,
+          remoteRenderer,
         );
       }
-      _isCalling = true;
+      isCalling = true;
       setState(() {});
     }
   }
 
-  Future<bool> _onWillPop() async {
+  Future<bool> onWillPop() async {
+    isShowDialog = true;
     return (await showDialog(
           context: context,
           builder: (context) => new AlertDialog(
@@ -223,14 +230,18 @@ class _CallPageState extends State<CallPage> {
             content: new Text('Kết thúc cuộc gọi'),
             actions: <Widget>[
               TextButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  isShowDialog = false;
+                  Navigator.of(context).pop();
+                },
                 child: new Text('Tiếp tục gọi'),
               ),
               TextButton(
                 onPressed: () {
+                  isShowDialog = false;
                   Navigator.pop(context);
-                  _sendMessage(null, "Kết thúc cuộc gọi");
-                  _makeCallCompleted();
+                  sendMessage(null, "Kết thúc cuộc gọi");
+                  makeCallCompleted();
                 },
                 child: new Text('Thoát'),
               ),
@@ -243,34 +254,35 @@ class _CallPageState extends State<CallPage> {
   @override
   void initState() {
     SystemChrome.setEnabledSystemUIOverlays([]);
-    _localRenderer.initialize();
-    _remoteRenderer.initialize();
+    localRenderer.initialize();
+    remoteRenderer.initialize();
     signaling.onAddRemoteStream = ((stream) {
-      _remoteRenderer.srcObject = stream;
+      remoteRenderer.srcObject = stream;
       setState(() {});
-      startTimmer();
+      startTimer();
     });
     signaling.onConnectedFail = () async {
       setState(() {
-        _isDisConnected = true;
+        isDisConnected = true;
       });
-      _makeCallCompleted();
+      widget.onHangUp();
       await showErrorDialog(
           context, "Mất kết nối", "Vui lòng kiểm tra lại kết nối internet");
+      makeCallCompleted();
       hangUp();
     };
     initPermission();
     initListener();
-    start_timeOut();
+    startTimeOut();
     super.initState();
   }
 
   @override
   void dispose() {
-    _timmer_timeOutInstance?.cancel();
-    _timmerInstance?.cancel();
-    _localRenderer.dispose();
-    _remoteRenderer.dispose();
+    timerTimeOutInstance?.cancel();
+    timerInstance?.cancel();
+    localRenderer.dispose();
+    remoteRenderer.dispose();
     assetsAudioPlayer.stop();
     SystemChrome.setEnabledSystemUIOverlays(SystemUiOverlay.values);
     super.dispose();
@@ -281,8 +293,8 @@ class _CallPageState extends State<CallPage> {
     Size size = MediaQuery.of(context).size;
     return WillPopScope(
       onWillPop: () async {
-        final result = await _onWillPop();
-        return result;
+        isShowDialog = !isShowDialog;
+        return await onWillPop();
       },
       child: Scaffold(
         body: Container(
@@ -291,67 +303,18 @@ class _CallPageState extends State<CallPage> {
             alignment: AlignmentDirectional.bottomEnd,
             children: [
               Visibility(
-                visible: _isReady && !widget.isVoiceCall,
-                child: buildMainRender(_remoteRenderer, size),
+                visible: isReady && !widget.isVoiceCall,
+                child: buildMainRender(
+                    remoteRenderer, size, remoteEnableCamera, isReady),
               ),
               if (widget.isVoiceCall)
-                buildVoiceCall()
-              else if (_isReady)
-                buildLocalRender(size)
+                buildVoiceCall(size, timeCall, isReady)
+              else if (isReady)
+                localRender(size)
               else
-                buildMainRender(_localRenderer, size),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                // mainAxisSize: MainAxisSize.min,
-                children: [
-                  buildIconButtonWidget(
-                      Icon(
-                        _isMute ? Icons.mic_off : Icons.mic,
-                        color: Colors.white,
-                        size: size.width * .06,
-                      ),
-                      size.width * .12,
-                      size.width * .12,
-                      () => setState(() {
-                            _isMute = !_isMute;
-                            signaling.muteAudio(_isMute);
-                          })),
-                  SizedBox(
-                    width: 16,
-                  ),
-                  buildIconButtonWidget(
-                      Icon(
-                        Icons.call_end,
-                        color: Colors.white,
-                        size: size.width / 12.0,
-                      ),
-                      size.width * .18,
-                      size.width * .18, () {
-                    {
-                      _makeCallCompleted();
-                      _sendMessage(null, "Kết thúc cuộc gọi");
-                    }
-                  }, backgroundColor: Colors.red.withOpacity(0.6)),
-                  SizedBox(
-                    width: 16,
-                  ),
-                  buildIconButtonWidget(
-                      Icon(
-                        _isSpeakerPhone
-                            ? CupertinoIcons.speaker_1_fill
-                            : CupertinoIcons.speaker_1,
-                        color: Colors.white,
-                        size: size.width * .06,
-                      ),
-                      size.width * .12,
-                      size.width * .12,
-                      () => setState(() {
-                            _isSpeakerPhone = !_isSpeakerPhone;
-                            signaling.enableSpeaker(_isSpeakerPhone);
-                          })),
-                ],
-              )
+                buildMainRender(
+                    localRenderer, size, remoteEnableCamera, isReady),
+              buildRowCall(size)
             ],
           ),
         ),
@@ -359,173 +322,91 @@ class _CallPageState extends State<CallPage> {
     );
   }
 
-  GestureDetector buildIconButtonWidget(
-      Widget icon, double height, double width, Function onTap,
-      {Color? backgroundColor}) {
-    return GestureDetector(
-      onTap: () {
-        onTap();
-      },
-      child: Container(
-        height: height,
-        width: width,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: backgroundColor ?? Colors.grey.withOpacity(0.6),
+  Row buildRowCall(Size size) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.center,
+      // mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButtonBehavior(
+            Icon(
+              isMute ? Icons.mic_off : Icons.mic,
+              color: Colors.white,
+              size: size.width * .06,
+            ),
+            size.width * .12,
+            size.width * .12,
+            () => setState(() {
+                  isMute = !isMute;
+                  signaling.muteAudio(isMute);
+                })),
+        SizedBox(
+          width: 16,
         ),
-        alignment: Alignment.center,
-        child: icon,
-      ),
+        IconButtonBehavior(
+            Icon(
+              Icons.call_end,
+              color: Colors.white,
+              size: size.width / 12.0,
+            ),
+            size.width * .18,
+            size.width * .18, () {
+          {
+            makeCallCompleted();
+            sendMessage(null, "Kết thúc cuộc gọi");
+          }
+        }, backgroundColor: Colors.red.withOpacity(0.6)),
+        SizedBox(
+          width: 16,
+        ),
+        IconButtonBehavior(
+            Icon(
+              isSpeakerPhone
+                  ? CupertinoIcons.speaker_fill
+                  : CupertinoIcons.speaker,
+              color: Colors.white,
+              size: size.width * .06,
+            ),
+            size.width * .12,
+            size.width * .12,
+            () => setState(() {
+                  isSpeakerPhone = !isSpeakerPhone;
+                  signaling.enableSpeaker(isSpeakerPhone);
+                })),
+      ],
     );
   }
 
-  Widget buildVoiceCall() {
-    Size size = MediaQuery.of(context).size;
-    return Container(
-      width: size.width,
-      height: size.height,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            _timmer,
-            style: TextStyle(
-              color: !_isReady ? Colors.transparent : Colors.green,
-              fontSize: size.width / 26.5,
-            ),
+  Widget localRender(Size size) {
+    return buildLocalRender(
+        localRenderer, timeCall, isFrontCamera, enableCamera, size, [
+      IconButtonBehavior(
+          Icon(
+            enableCamera ? Icons.videocam : Icons.videocam_off,
+            color: Colors.white,
+            size: size.width * .06,
           ),
-          Text(
-            _isReady && _timmer.isNotEmpty ? "Đang gọi..." : "Đang kết nối...",
-            style: TextStyle(
-                fontSize: 20,
-                color: _isReady && _timmer.isNotEmpty
-                    ? Colors.green
-                    : Colors.orange,
-                fontWeight: FontWeight.bold),
-          ),
-        ],
+          size.width * .12,
+          size.width * .12, () {
+        setState(() {
+          enableCamera = !enableCamera;
+          updateEnableCamera(enableCamera);
+          signaling.enableCamera(enableCamera);
+        });
+      }),
+      SizedBox(
+        width: 12,
       ),
-    );
-  }
-
-  Positioned buildLocalRender(Size size) {
-    return Positioned(
-      top: 40.0,
-      right: 16.0,
-      child: Column(
-        children: [
-          Text(
-            _timmer,
-            style: TextStyle(
-              color: _localRenderer.textureId == null
-                  ? Colors.transparent
-                  : Colors.green,
-              fontSize: size.width / 26.5,
-            ),
+      IconButtonBehavior(
+          Icon(
+            Icons.switch_camera,
+            color: Colors.white,
+            size: size.width * .06,
           ),
-          SizedBox(
-            height: 8.0,
-          ),
-          Container(
-            height: size.width * .5,
-            width: size.width * .3,
-            decoration: BoxDecoration(
-              color: Colors.grey,
-              borderRadius: BorderRadius.all(Radius.circular(6.0)),
-              border: Border.all(color: Colors.blueAccent, width: 2.0),
-            ),
-            child: _localRenderer.textureId == null
-                ? Container()
-                : SizedBox(
-                    width: size.height,
-                    height: size.height,
-                    child: !_enableCamera
-                        ? Center(child: Text("Camera off"))
-                        : Transform(
-                            transform: Matrix4.identity()
-                              ..rotateY(
-                                _isFrontCamera ? -pi : 0.0,
-                              ),
-                            alignment: FractionalOffset.center,
-                            child: Texture(
-                                textureId: _localRenderer.textureId ?? 1),
-                          ),
-                  ),
-          ),
-          SizedBox(
-            height: 8,
-          ),
-          Row(
-            children: [
-              buildIconButtonWidget(
-                  Icon(
-                    _enableCamera ? Icons.videocam : Icons.videocam_off,
-                    color: Colors.white,
-                    size: size.width * .06,
-                  ),
-                  size.width * .12,
-                  size.width * .12, () {
-                setState(() {
-                  _enableCamera = !_enableCamera;
-                  _updateEnableCamera(_enableCamera);
-                  signaling.enableCamera(_enableCamera);
-                });
-              }),
-              SizedBox(
-                width: 12,
-              ),
-              buildIconButtonWidget(
-                  Icon(
-                    Icons.switch_camera,
-                    color: Colors.white,
-                    size: size.width * .06,
-                  ),
-                  size.width * .12,
-                  size.width * .12, () {
-                signaling.switchCamera();
-              })
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Container buildMainRender(RTCVideoRenderer render, Size size) {
-    print(
-        'rebuild main ${!_remoteEnableCamera } ${render.textureId} ');
-    return Container(
-      width: size.width,
-      height: size.height,
-      child: render.textureId == null
-          ? Container()
-          : !_remoteEnableCamera
-              ? Center(
-                  child: Text('Camera Off'),
-                )
-              : FittedBox(
-                  fit: BoxFit.cover,
-                  alignment: Alignment.center,
-                  child: Center(
-                    child: Stack(
-                      alignment: AlignmentDirectional.center,
-                      children: [
-                        SizedBox(
-                          width: size.width,
-                          height: size.height,
-                          child: Transform(
-                            transform: Matrix4.identity()..rotateY(0.0),
-                            alignment: FractionalOffset.center,
-                            child: Texture(textureId: render.textureId!),
-                          ),
-                        ),
-                        Visibility(
-                            visible: !_isReady, child: Text("Đang kết nối...")),
-                      ],
-                    ),
-                  ),
-                ),
-    );
+          size.width * .12,
+          size.width * .12, () {
+        signaling.switchCamera();
+      })
+    ]);
   }
 }
